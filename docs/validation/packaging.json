@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-03",
+  "dmgSHA256": "cf89d07ef4e4c5ded97dc8cd6e3ab189c5cad4cee2b5defbf4f9ff7f29a046bc",
+  "dmgBytes": 6728915,
+  "mountedAppFilesVerified": 22,
+  "readOnlyMountedAppSelfCheck": "passed",
+  "appSignatureIntegrity": "passed (ad-hoc)",
+  "inputMethodSignatureIntegrity": "passed (ad-hoc)",
+  "nativeAppKeyboardChecks": "passed in local app",
+  "systemInputMethodInstalledForTest": false,
+  "crossAppAcceptance": "not tested",
+  "notarized": false
+}

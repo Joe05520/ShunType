@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-03",
+  "version": "0.1.0-preview.1",
+  "architecture": "arm64",
+  "dictionaryEntries": 171126,
+  "coldLoadMilliseconds": 651.01397037506104,
+  "warmDecodeP50Milliseconds": 0.003959,
+  "warmDecodeP95Milliseconds": 0.02425,
+  "warmDecodeMaxMilliseconds": 0.469708,
+  "samples": 390,
+  "scope": "Single local Release run: 13 short fixtures x 30 rounds. Core only; not UI latency or accuracy."
+}

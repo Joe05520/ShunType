@@ -1,0 +1,19 @@
+name: Build and test macOS
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core and composition tests
+        run: swift test
+      - name: Build release executables
+        run: swift build -c release
+      - name: Check dictionary integrity
+        run: python3 scripts/check_dictionary.py

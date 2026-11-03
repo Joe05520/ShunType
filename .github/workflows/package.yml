@@ -1,0 +1,23 @@
+name: Package preview DMG
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+      - run: python3 scripts/check_dictionary.py
+      - name: Build ad-hoc preview app and DMG
+        run: python3 scripts/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShunType-preview-DMG
+          path: |
+            outputs/*.dmg
+            outputs/SHA256SUMS.txt
+            outputs/build-manifest.json
+            outputs/開始使用.txt
+          if-no-files-found: error

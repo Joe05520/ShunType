@@ -29,6 +29,23 @@ enum Installer {
     @MainActor static func openKeyboardSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") { NSWorkspace.shared.open(url) }
     }
+    @MainActor static func selectInputSource(_ identifier: String) -> String {
+        let query = [kTISPropertyInputSourceID as String: identifier] as CFDictionary
+        let sources = TISCreateInputSourceList(query, true).takeRetainedValue() as! [TISInputSource]
+        guard let source = sources.first else { return "macOS 尚未列出這個輸入來源，請先在鍵盤設定加入。" }
+        if identifier.contains("shuntype") {
+            let alert = NSAlert()
+            alert.messageText = "選用測試中的順打輸入法？"
+            alert.informativeText = "本版已修正封裝與啟動錯誤，但尚未完成跨 App 實體鍵盤測試。請先在空白測試文件試用；若無法打字，從選單列切回原有輸入法，或返回本頁按「切回 ABC」。"
+            alert.addButton(withTitle: "取消")
+            alert.addButton(withTitle: "選用測試")
+            guard alert.runModal() == .alertSecondButtonReturn else { return "未切換輸入法。" }
+            let enabled = TISEnableInputSource(source)
+            guard enabled == noErr else { return "無法啟用輸入來源（\(enabled)）。" }
+        }
+        let status = TISSelectInputSource(source)
+        return status == noErr ? "已選用：\(identifier == "com.apple.keylayout.ABC" ? "ABC" : "順打")" : "切換未完成（\(status)）。"
+    }
     @MainActor static func revealInputMethods() {
         if isInstalled { NSWorkspace.shared.activateFileViewerSelecting([destination]) }
         else if FileManager.default.fileExists(atPath: directory.path) { NSWorkspace.shared.open(directory) }

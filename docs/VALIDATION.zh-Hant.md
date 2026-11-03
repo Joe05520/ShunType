@@ -1,4 +1,33 @@
-# 0.1 開發預覽驗證紀錄
+# 開發預覽驗證紀錄
+
+## 0.1.0-preview.2（build 3）：封裝與啟動修正
+
+2026-11-03，Apple Silicon、macOS 27、Xcode 27 / Swift 6.4。
+
+### 已確認的舊版失敗
+
+- 先前本機安裝為 build 2。App 內試打可用；使用者在選用原生輸入法後回報「我打不出字」，應記為已知失敗，不能只寫成尚未人工測試。
+- 檢查實際已安裝的 Info.plist，確認缺少 InputMethodConnectionName、InputMethodServerControllerClass 及 TISIntendedLanguage。打包程式定義了輸入法設定，卻漏傳 input_method=True，因此沒有寫入產物。系統把來源列在英文分類。
+- 六份系統崩潰紀錄指向 _IMKServerLegacy 的 initWithName:controllerClass:delegateClass:，發生於嘗試改成明確控制器初始化的 build 2。這是額外引入的啟動錯誤。
+- 中斷後續作的唯讀檢查確認：目前使用系統繁體注音；順打已停用、未選用，輸入法程序未執行。因此沒有重做切換或停用操作。
+
+### 本次修正及檢查
+
+- 打包時明確啟用輸入法設定；移除不使用的 delegate 類別設定。
+- 改回依 bundle identifier 初始化 IMKServer，啟動前檢查必要 metadata 及 Objective-C 控制器名稱能否解析。設定不完整時退出並報錯。
+- 將文字輸出 session 與 IMK 控制器建立分離，以合成 IMKTextInput client 檢查「你好」組字、提交、Esc 原文、刪除組字、快捷鍵放行、重複 activate 與 deactivate 提交，並確認既有文字前綴保留。
+- 封裝流程對實際簽署後的 App 與輸入法執行 --self-check；失敗即中止，不進入 DMG 建立步驟。輸入法檢查使用獨立連線名稱，不註冊、啟用或選用系統輸入來源。
+- README 為英文在前、繁體中文在後；介面改用功能名稱。選用實驗性輸入法前明示尚未完成跨 App 驗證。
+- 重新執行 14 個核心 XCTest，0 失敗；171,126 筆固定來源詞庫及 SHA-256 檢查通過。
+- 修正後的 App 與輸入法已更新至原安裝位置，舊檔保留備份；逐檔雜湊與建置產物一致。未關閉原先已開啟的 App 視窗，重新開啟後才會執行新的介面程式。
+- 重新註冊回傳 0；註冊後查得語言 zh-Hant，順打仍停用且未選用。目前輸入來源仍為系統繁體注音。已安裝的兩個可執行檔也通過 --self-check。
+- 最終 DMG 的映像檢查通過；唯讀掛載後 22 個檔案逐一 SHA-256 與原建置產物相同。從掛載包執行 App 與輸入法 --self-check 通過，結束後卸載映像。
+
+### 仍未完成
+
+封裝啟動通過、模擬文字框通過，都不代表真實 OS client proxy、實體鍵盤、TextEdit 或其他 App 已通過。這一輪未重新啟用順打，不宣稱「無法打字」的使用者情境已完整解決。舊 DMG 已發布；應使用修正後版本，避免再啟用舊輸入法。
+
+## 0.1.0-preview.1：原始驗證範圍
 
 日期：2026-11-03。測試主機為 Apple Silicon、macOS 27；使用 Xcode 27.0 / Swift 6.4，部署目標 macOS 14。部署目標不代表已在 macOS 14 真機測試。
 
@@ -32,7 +61,7 @@
 
 ## 尚未驗證，不能宣稱完成
 
-- 未將順打安裝到開發者目前的系統輸入來源；因此未驗證真實 IMK 註冊、選用、生命周期或重啟後持續可用。
+- preview.1 發布時尚未安裝系統輸入法；後續本機安裝及失敗紀錄見上方 preview.2。真實 IMK 生命周期與重啟後持續可用仍未通過。
 - 未完成 LINE、Word、Safari、Chrome、VS Code、終端機等跨 App 接受測試。
 - 未測 App 特有的復原、選取、直排、遠端桌面、安全輸入、睡眠喚醒與多視窗焦點切換。
 - 未驗證其他 macOS 版本、Intel、多鍵盤配置與長時間大量日常使用。

@@ -35,7 +35,7 @@ final class StudioModel: ObservableObject {
     @Published var raw = ""
     @Published var marked = ""
     @Published var reading = ""
-    @Published var reason = "直接打字，順打會在這個試打區判斷中英文。"
+    @Published var reason = "此文字框使用順打的中英組字邏輯。"
     @Published var candidates: [String] = []
     @Published var selected = 0
     @Published var document = ""
@@ -67,7 +67,7 @@ final class StudioModel: ObservableObject {
 }
 
 private enum Page: String, CaseIterable, Identifiable {
-    case type = "試打", recover = "還原文字", setup = "安裝與說明"
+    case type = "注音試打", recover = "還原文字", setup = "安裝與說明"
     var id: String { rawValue }
     var symbol: String { switch self { case .type: return "keyboard"; case .recover: return "text.badge.checkmark"; case .setup: return "slider.horizontal.3" } }
 }
@@ -103,7 +103,7 @@ struct ContentView: View {
                     Label("輸入只留在本機", systemImage: "lock.shield").font(.system(size: 12, weight: .medium))
                     Text("不需帳號，也不需網路。\n試打不會接管其他 App。").font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
                     Divider().padding(.vertical, 7)
-                    Text("0.1.0 · 開發預覽").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                    Text("0.1.0-preview.2 (3)").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
                 }
             }.padding(24).frame(width: 212).background(Color(red: 0.93, green: 0.96, blue: 0.94))
             ScrollView {
@@ -133,8 +133,8 @@ struct ContentView: View {
     private var typePage: some View {
         VStack(alignment: .leading, spacing: 23) {
             VStack(alignment: .leading, spacing: 9) {
-                Text("少切換，順著打。").font(.system(size: 34, weight: .bold))
-                Text("直接打注音按鍵或英文，在這裡體驗自動中英組字。").font(.system(size: 14)).foregroundStyle(.secondary)
+                Text("注音與英文試打").font(.system(size: 34, weight: .bold))
+                Text("使用標準注音按鍵或英文，檢查組字與候選結果。").font(.system(size: 14)).foregroundStyle(.secondary)
             }
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
@@ -168,7 +168,7 @@ struct ContentView: View {
                 }.padding(17).frame(minHeight: 64)
             }.background(.white, in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(ink.opacity(0.09)))
             HStack(spacing: 8) {
-                Text("試試看").font(.system(size: 12)).foregroundStyle(.secondary)
+                Text("範例").font(.system(size: 12)).foregroundStyle(.secondary)
                 sampleButton("你好嗎", "su3cl3a8")
                 sampleButton("中國", "5j/ eji6")
                 sampleButton("保留英文", "python3")
@@ -181,7 +181,7 @@ struct ContentView: View {
             }.padding(.top, 4)
             HStack(spacing: 8) {
                 Image(systemName: "info.circle")
-                Text("這是 App 內試打。要在其他程式使用，請到「安裝與說明」啟用原生輸入法。")
+                Text("這是 App 內試打。原生輸入法的跨 App 驗證仍未完成，請保留原本輸入法。")
             }.font(.system(size: 11)).foregroundStyle(.secondary).padding(14)
                 .background(accent.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
         }
@@ -199,7 +199,7 @@ struct ContentView: View {
 
     private var recoveryPage: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("已經打錯，也救得回來。").font(.system(size: 30, weight: .bold))
+            Text("還原注音亂碼").font(.system(size: 30, weight: .bold))
             Text("貼入文字後按還原。結果留在這個 App，不會自動覆寫其他程式。").font(.system(size: 13)).foregroundStyle(.secondary)
             modePicker
             Text("原始文字").font(.system(size: 13, weight: .semibold))
@@ -227,8 +227,8 @@ struct ContentView: View {
 
     private var setupPage: some View {
         VStack(alignment: .leading, spacing: 22) {
-            Text("從試打，到日常輸入。").font(.system(size: 30, weight: .bold))
-            Text("先確認手感，再由你決定是否安裝原生輸入法。").foregroundStyle(.secondary)
+            Text("安裝輸入法").font(.system(size: 30, weight: .bold))
+            Text("原生輸入法仍在驗證中，日常使用請保留原本輸入法。").foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 18) {
                 Label(Installer.isInstalled ? "已找到輸入法檔案" : "尚未安裝系統輸入法", systemImage: Installer.isInstalled ? "checkmark.circle" : "circle.dashed").font(.headline)
                 Text("1　建議先把「順打」拖到「應用程式」，再開啟。\n2　按下安裝，只會新增「順打輸入法」，不刪除原有輸入法。\n3　到鍵盤設定加入「順打」，再從選單列選用。").font(.system(size: 13)).lineSpacing(8)
@@ -236,8 +236,12 @@ struct ContentView: View {
                     Button("安裝順打輸入法…") { model.installMessage = Installer.confirmAndInstall() }.buttonStyle(.borderedProminent)
                     Button("開啟鍵盤設定") { Installer.openKeyboardSettings() }.buttonStyle(.bordered)
                 }
+                HStack {
+                    Button("選用順打") { model.installMessage = Installer.selectInputSource("org.shuntype.inputmethod.ShunType") }.disabled(!Installer.isInstalled)
+                    Button("切回 ABC") { model.installMessage = Installer.selectInputSource("com.apple.keylayout.ABC") }
+                }
                 if !model.installMessage.isEmpty { Text(model.installMessage).font(.system(size: 12)).textSelection(.enabled) }
-                Text("系統可能需要登出再登入，才會顯示新輸入法。檔案存在不代表已啟用，也不代表已通過跨 App 測試。").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("舊預覽版曾無法打字。本版已修正封裝與啟動錯誤，通過啟動及模擬文字框測試；跨 App 實體鍵盤驗收仍未完成。系統可能需要登出再登入，才會顯示新輸入法。").font(.system(size: 11)).foregroundStyle(.secondary)
             }.padding(22).frame(maxWidth: .infinity, alignment: .leading).background(.white, in: RoundedRectangle(cornerRadius: 14))
             VStack(alignment: .leading, spacing: 12) {
                 Text("使用前先知道").font(.headline)
@@ -247,7 +251,7 @@ struct ContentView: View {
             Divider()
             HStack(alignment: .top, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("離線，且可檢查").font(.system(size: 13, weight: .semibold))
+                    Text("資料處理").font(.system(size: 13, weight: .semibold))
                     Text("不讀取文件或輸入歷史。\n不使用全域鍵盤監聽與雲端 API。\n詞庫 \(model.decoder.entryCount.formatted()) 筆，隨 App 附上。").font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(5)
                 }
                 Spacer()

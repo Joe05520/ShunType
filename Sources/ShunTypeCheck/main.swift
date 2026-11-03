@@ -20,7 +20,7 @@ if CommandLine.arguments.count > 1 {
     }
     timings.sort()
     let result: [String: Any] = [
-        "version": "0.1.0-preview.1", "dictionaryEntries": decoder.entryCount,
+        "version": "0.1.0-preview.2", "dictionaryEntries": decoder.entryCount,
         "coldLoadMilliseconds": decoder.loadMilliseconds,
         "warmDecodeP50Milliseconds": timings[timings.count / 2],
         "warmDecodeP95Milliseconds": timings[Int(Double(timings.count) * 0.95)],

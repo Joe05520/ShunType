@@ -1,23 +1,27 @@
 import AppKit
 import InputMethodKit
 import ShunTypeCore
+import os
 
-@objc(ShunTypeInputController)
-final class ShunTypeInputController: IMKInputController {
+/// Text delivery is separate from IMK's controller construction, which requires a
+/// real OS client proxy. This session can also be exercised with a synthetic client.
+final class InputSession: NSObject {
     private var composition = Composition()
     private weak var currentClient: IMKTextInput?
     private var candidateWindow: NSPanel?
+    private var reportedClientMismatch = false
+    private let diagnostics = Logger(subsystem: "org.shuntype.inputmethod", category: "integration")
 
-    override func recognizedEvents(_ sender: Any!) -> Int { Int(NSEvent.EventTypeMask.keyDown.rawValue) }
-
-    override func activateServer(_ sender: Any!) {
+    func activate(_ sender: Any!) {
         currentClient = sender as? IMKTextInput
-        composition.reset()
-        currentClient?.overrideKeyboard(withKeyboardNamed: "com.apple.keylayout.ABC")
     }
 
-    override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
-        guard let event, let input = sender as? IMKTextInput, event.type == .keyDown else { return false }
+    func processEvent(_ event: NSEvent!, client sender: Any!) -> Bool {
+        guard let event, event.type == .keyDown else { return false }
+        guard let input = sender as? IMKTextInput else {
+            if !reportedClientMismatch { diagnostics.error("Input client does not declare IMKTextInput conformance"); reportedClientMismatch = true }
+            return false
+        }
         currentClient = input
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if flags.contains(.control), flags.intersection([.command, .option, .shift]).isEmpty, event.keyCode == 42 {
@@ -67,15 +71,15 @@ final class ShunTypeInputController: IMKInputController {
         apply(composition.process(.boundary), input)
         candidateWindow?.orderOut(nil)
     }
-    override func commitComposition(_ sender: Any!) { if let input = (sender as? IMKTextInput) ?? currentClient { finish(input) } }
-    override func deactivateServer(_ sender: Any!) {
+    func commit(_ sender: Any!) { if let input = (sender as? IMKTextInput) ?? currentClient { finish(input) } }
+    func deactivate(_ sender: Any!) {
         if let input = (sender as? IMKTextInput) ?? currentClient { finish(input) }
         currentClient = nil; candidateWindow?.orderOut(nil)
     }
-    override func composedString(_ sender: Any!) -> Any! { composition.rendered }
-    override func originalString(_ sender: Any!) -> NSAttributedString! { NSAttributedString(string: composition.raw) }
-    override func candidates(_ sender: Any!) -> [Any]! { composition.analysis.candidates.map(\.text) }
-    override func hidePalettes() { candidateWindow?.orderOut(nil); super.hidePalettes() }
+    func composedText(_ sender: Any!) -> Any! { composition.rendered }
+    func originalText(_ sender: Any!) -> NSAttributedString! { NSAttributedString(string: composition.raw) }
+    func candidateTexts(_ sender: Any!) -> [Any]! { composition.analysis.candidates.map(\.text) }
+    func dismissCandidates() { candidateWindow?.orderOut(nil) }
 
     private func showCandidates(_ input: IMKTextInput, message: String? = nil) {
         let a = composition.analysis
@@ -103,7 +107,7 @@ final class ShunTypeInputController: IMKInputController {
         panel.orderFrontRegardless(); candidateWindow = panel
     }
 
-    override func menu() -> NSMenu! {
+    func makeMenu() -> NSMenu! {
         let menu = NSMenu()
         for mode in InputMode.allCases {
             let item = NSMenuItem(title: mode.title, action: #selector(selectMode(_:)), keyEquivalent: "")
@@ -119,10 +123,48 @@ final class ShunTypeInputController: IMKInputController {
     }
 }
 
+@objc(ShunTypeInputController)
+final class ShunTypeInputController: IMKInputController {
+    private let session = InputSession()
+    override func recognizedEvents(_ sender: Any!) -> Int { Int(NSEvent.EventTypeMask.keyDown.rawValue) }
+    override func activateServer(_ sender: Any!) { session.activate(sender) }
+    override func handle(_ event: NSEvent!, client sender: Any!) -> Bool { session.processEvent(event, client: sender) }
+    override func commitComposition(_ sender: Any!) { session.commit(sender) }
+    override func deactivateServer(_ sender: Any!) { session.deactivate(sender) }
+    override func composedString(_ sender: Any!) -> Any! { session.composedText(sender) }
+    override func originalString(_ sender: Any!) -> NSAttributedString! { session.originalText(sender) }
+    override func candidates(_ sender: Any!) -> [Any]! { session.candidateTexts(sender) }
+    override func hidePalettes() { session.dismissCandidates(); super.hidePalettes() }
+    override func menu() -> NSMenu! { session.makeMenu() }
+}
+
 let app = NSApplication.shared
 app.setActivationPolicy(.prohibited)
 let bundle = Bundle.main
-let server = IMKServer(name: bundle.object(forInfoDictionaryKey: "InputMethodConnectionName") as? String ?? "ShunType_Connection", bundleIdentifier: bundle.bundleIdentifier ?? "org.shuntype.inputmethod")
+let checking = CommandLine.arguments.contains("--self-check")
+guard let identifier = bundle.bundleIdentifier,
+      let connection = bundle.object(forInfoDictionaryKey: "InputMethodConnectionName") as? String,
+      let controllerName = bundle.object(forInfoDictionaryKey: "InputMethodServerControllerClass") as? String,
+      NSClassFromString(controllerName) == ShunTypeInputController.self else {
+    fputs("Invalid input method bundle configuration: id=\(bundle.bundleIdentifier ?? "missing"), connection=\(bundle.object(forInfoDictionaryKey: "InputMethodConnectionName") ?? "missing"), controller=\(bundle.object(forInfoDictionaryKey: "InputMethodServerControllerClass") ?? "missing"), expected=\(NSStringFromClass(ShunTypeInputController.self)).\n", stderr)
+    exit(1)
+}
+// The controllerClass initializer crashes inside _IMKServerLegacy on macOS 27.
+// Use the bundle-based initializer so IMK resolves the controller from Info.plist.
+// Checks use a separate connection and never register or select an input source.
+guard let server = IMKServer(name: checking ? "\(identifier).check.\(UUID().uuidString)_Connection" : connection,
+                             bundleIdentifier: identifier) else {
+    fputs("Could not create the input method server.\n", stderr)
+    exit(1)
+}
 _ = Decoder.shared
+if checking {
+    guard checkInputAdapter() else {
+        fputs("Synthetic input adapter check failed.\n", stderr)
+        exit(1)
+    }
+    print("IMK server initialized; controller class resolved; dictionary loaded. No input source was registered or selected.")
+    exit(0)
+}
 app.run()
 withExtendedLifetime(server) {}

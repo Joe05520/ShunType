@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse, hashlib, json, os, platform, plistlib, shutil, subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.0-preview.1"
+VERSION = "0.1.0-preview.2"
 ARCH = platform.machine()
 assert ARCH in ("arm64", "x86_64"), f"Unsupported build host: {ARCH}"
 parser = argparse.ArgumentParser()
@@ -43,7 +43,7 @@ def make_bundle(path, executable, identifier, name, input_method=False):
         "CFBundleName": name, "CFBundleDisplayName": name,
         "CFBundleExecutable": executable, "CFBundleIdentifier": identifier,
         "CFBundlePackageType": "APPL", "CFBundleInfoDictionaryVersion": "6.0",
-        "CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "1",
+        "CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "3",
         "CFBundleIconFile": "ShunType", "LSMinimumSystemVersion": "14.0",
         "NSHighResolutionCapable": True, "NSPrincipalClass": "NSApplication",
         "NSHumanReadableCopyright": "Copyright © 2026 ShunType contributors. MIT License.",
@@ -54,7 +54,6 @@ def make_bundle(path, executable, identifier, name, input_method=False):
             "LSUIElement": True,
             "InputMethodConnectionName": "ShunType_Connection",
             "InputMethodServerControllerClass": "ShunTypeInputController",
-            "InputMethodServerDelegateClass": "ShunTypeInputController",
             "TISInputSourceID": identifier, "TISIntendedLanguage": "zh-Hant",
             "tsInputMethodCharacterRepertoireKey": ["Hant", "Latn"],
             "tsInputMethodIconFileKey": "InputMenu.tiff",
@@ -67,7 +66,7 @@ def make_bundle(path, executable, identifier, name, input_method=False):
 app = OUT / "ShunType.app"
 resources = make_bundle(app, "ShunType", "org.shuntype.studio", "順打 ShunType")
 ime = resources / "ShunTypeInputMethod.app"
-make_bundle(ime, "ShunTypeInputMethod", "org.shuntype.inputmethod.ShunType", "順打")
+make_bundle(ime, "ShunTypeInputMethod", "org.shuntype.inputmethod.ShunType", "順打", input_method=True)
 
 identity = os.environ.get("SHUNTYPE_SIGN_IDENTITY", "-")
 for target in [ime, app]:
@@ -75,6 +74,11 @@ for target in [ime, app]:
     if identity != "-": command += ["--options", "runtime", "--timestamp"]
     run(*command, target)
     run("codesign", "--verify", "--deep", "--strict", target)
+
+# Check the actual signed, packaged binaries; compilation alone did not catch a
+# missing input-method Info.plist or the macOS 27 IMK startup crash.
+run(ime / "Contents/MacOS/ShunTypeInputMethod", "--self-check", timeout=20)
+run(app / "Contents/MacOS/ShunType", "--self-check", timeout=20)
 
 stage = WORK / "dmg-stage"
 if stage.exists(): shutil.rmtree(stage)
@@ -84,14 +88,16 @@ shutil.copytree(app, stage / app.name)
 guide = """順打 ShunType 0.1 開發預覽
 
 1. 把 ShunType.app 拖到 Applications（應用程式）。
-2. 開啟順打，先在「試打」體驗。完全離線，不需開發工具或額外模型。
-3. 想在其他 App 使用時，請閱讀「安裝與說明」，再由你決定安裝原生輸入法。
+2. 開啟順打，在「注音試打」輸入文字。使用內附詞庫，不需額外安裝工具。
+3. 原生輸入法仍在驗證中，日常使用請先保留原本輸入法。
 
 本預覽包採本機 ad-hoc 簽署，尚未經 Apple 公證。從網路下載後，Gatekeeper 可能阻擋。
 若系統不允許開啟，請等待 Developer ID 簽署與公證版本；不需關閉系統安全防護。
 
 macOS 14+；此包為 Apple Silicon（arm64）。Intel 版本尚未提供。
 此包不是已通過所有 App 測試的穩定版。
+舊預覽版曾因封裝與啟動錯誤而無法打字。本包已修正這兩處錯誤，
+並通過封裝啟動與模擬文字框測試；跨 App 的實體鍵盤驗收仍未完成。
 沒有安裝輸入法時，只有 App 內試打與還原文字可用。
 順打需成為目前輸入法才能處理輸入；切到 ABC 時不會處理。
 

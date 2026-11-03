@@ -17,3 +17,5 @@ jobs:
         run: swift build -c release
       - name: Check dictionary integrity
         run: python3 scripts/check_dictionary.py
+      - name: Check packaged app and input method startup
+        run: python3 scripts/package.py --skip-build

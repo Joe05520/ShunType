@@ -1,25 +1,27 @@
-# ShunType 0.1.0-preview.1
+# ShunType 0.1.0-preview.2
 
-第一個 macOS 開發預覽，包含原生 App、離線詞庫、注音亂碼還原，以及內附的 InputMethodKit 輸入法。
+Fixes input-method packaging and a startup crash found during local installation. The app editor and text recovery remain available. System input is experimental; physical-keyboard input across apps still needs acceptance testing.
 
-## 下載後
+- Write the required InputMethodKit metadata into the packaged input method. Earlier bundles omitted these fields and were classified under English.
+- Use bundle-based IMKServer initialization. The controller-class initializer crashed inside _IMKServerLegacy on the tested macOS 27 host.
+- Check both signed, packaged executables before creating the DMG. The input-method check covers server startup and text delivery to a synthetic client without selecting an input source.
+- Replace interface slogans with functional labels. Put English first in the README, followed by Traditional Chinese.
+- Mark system input as experimental and confirm before selecting it. Keep the return-to-ABC control.
 
-開啟 `.dmg`，把 `ShunType.app` 拖到「應用程式」，開啟後先用「試打」。不需安裝開發工具、模型或建立帳號。
+Build number 3. Apple Silicon (arm64), macOS 14 deployment target; tested on macOS 27. Ad-hoc signed, not notarized by Apple. Gatekeeper may block downloaded copies. No security settings need to be disabled.
 
-## 目前可用
+Open the DMG, drag ShunType.app to Applications, and use the app's typing editor or text recovery. Keep your existing input methods for daily typing. The startup and synthetic-client checks do not prove that the earlier inability to type has been resolved in real apps. See the [validation record](https://github.com/Joe05520/ShunType/blob/main/docs/VALIDATION.zh-Hant.md) for the scope.
 
-- App 內真實組字試打，三種模式、候選輪換、Esc 原文復原。
-- 已打錯文字的本機還原與手動複製。
-- 171,126 筆固定來源注音詞庫，完全離線。
-- 原生輸入法 bundle 與使用者主動安裝的介面；建置與開啟 App 不會啟用輸入法。
+## 繁體中文
 
-## 發布狀態
+修正本機安裝時發現的輸入法封裝錯誤與啟動崩潰。App 內試打與文字還原可用；系統輸入仍為實驗功能，跨 App 的實體鍵盤驗收尚未完成。
 
-- 架構：Apple Silicon（arm64）；最低部署目標 macOS 14。舊版 macOS 與 Intel 未實測。
-- 簽署：ad-hoc，**尚未 Developer ID 簽署或 Apple 公證**。網路下載後可能被 Gatekeeper 阻擋；不建議關閉系統安全保護。正式無痛安裝仍需發布簽署身分與公證。
-- 核心與 App 內驗證不等於系統 IMK 接受測試。LINE、Word、瀏覽器、睡眠喚醒、登入與輸入來源切換仍需真機驗證。
-- 自動模式保守處理短字串，仍可能選錯同音字或漏轉。不能保證零誤判。
+- 將必要的 InputMethodKit 設定寫入輸入法封裝。舊包漏寫設定，被系統列在英文分類。
+- 改回依 bundle identifier 初始化 IMKServer；明確控制器初始化方式在已測 macOS 27 主機會崩潰。
+- 建立 DMG 前，對已簽署的 App 與輸入法執行檢查。輸入法檢查包含啟動及模擬文字框輸出，不切換系統輸入來源。
+- 介面改用功能名稱；README 改為英文在前、繁體中文在後。
+- 標示系統輸入仍在測試，選用前需確認；保留「切回 ABC」。
 
-請先在非重要文字試用，保留原有輸入法。下載旁附 SHA256SUMS.txt，可用來核對資產完整性。
+Build number 為 3。Apple Silicon（arm64），部署目標 macOS 14，實測 macOS 27。採 ad-hoc 簽署，尚未 Apple 公證，下載版可能被 Gatekeeper 阻擋。無需關閉系統安全防護。
 
-完整已測與未測範圍見儲存庫 docs/VALIDATION.zh-Hant.md。
+開啟 DMG，將 ShunType.app 拖到「應用程式」，先使用 App 內試打或文字還原。日常打字請保留原本輸入法。啟動及模擬文字框檢查通過，不代表已完整修復真實 App 中無法打字的情境；已測與未測範圍見驗證紀錄。

@@ -1,53 +1,60 @@
-# 順打 ShunType
+# ShunType 順打
 
-**Mac＋標準注音的中英組字實驗。少切換，順著打。**
+ShunType is a macOS app for testing mixed English and Traditional Chinese Zhuyin input and recovering text typed with the wrong input source. It includes a typing editor, a text recovery tool, and an optional InputMethodKit input method.
 
-原生 macOS App，內含互動試打、注音亂碼還原，以及可另行安裝的 InputMethodKit 輸入法。MIT 開源，詞庫離線附帶，不需帳號、Python、API Key 或大型模型。
+[Download DMG](https://github.com/Joe05520/ShunType/releases/tag/v0.1.0-preview.2) · [Release notes](docs/RELEASE.zh-Hant.md) · [Validation record](docs/VALIDATION.zh-Hant.md) · [繁體中文](#繁體中文)
 
-> **0.1 開發預覽，尚未 Apple 公證。** 已建置的 DMG 為 Apple Silicon / macOS 14+。本版仍需驗證系統輸入法的實際註冊與跨 App 相容性，不宣稱能在所有程式無痛取代既有輸入法。請保留系統 ABC 與原本的注音。
+**Status:** development preview for Apple Silicon, with a macOS 14 deployment target. The app uses ad-hoc signing and has not been notarized by Apple. Gatekeeper may block downloaded copies. Earlier builds could fail to type because input-method metadata was missing and a later server initialization change crashed on macOS 27. This update fixes both errors and adds packaged startup and synthetic-client checks. Physical-keyboard input across apps is still unverified. Use the app editor and text recovery while system input validation is pending.
 
-[下載開發預覽 DMG](https://github.com/Joe05520/ShunType/releases/tag/v0.1.0-preview.1) · [開發計畫](docs/PLAN.zh-Hant.md) · [驗證範圍](docs/VALIDATION.zh-Hant.md) · [發布說明](docs/RELEASE.zh-Hant.md)
+![ShunType typing editor, with a Traditional Chinese interface](docs/images/01-typing.png)
 
-![順打原生 App 互動試打畫面](docs/images/01-typing.png)
+## What it does
 
-## 開始使用
+- Interprets standard Daqian Zhuyin keystrokes, such as `su3cl3` → `你好`.
+- Provides automatic, Zhuyin-first, and English-only modes.
+- Keeps ambiguous input unchanged in automatic mode. Some short sequences require Zhuyin-first mode.
+- Provides candidates and preserves the original keystrokes during composition.
+- Recovers text pasted into the app. Results are copied only when the user chooses to copy them.
+- Uses a bundled dictionary with 171,126 entries. Input processing runs locally without an account, network service, or downloaded model.
 
-1. 下載 DMG，把 **ShunType.app** 拖到 **Applications／應用程式**。
-2. 開啟 App，在「試打」點一下輸入框，直接輸入按鍵。
-3. 例如 `su3cl3` → 你好、`su3cl3a8` → 你好嗎、`5j/ eji6` → 中國。
-4. Enter 確認組字；Esc 保留原始英數；↓ 或 Tab 換候選。
-5. 需要在其他 App 使用時，閱讀「安裝與說明」，再決定是否新增原生輸入法。安裝後仍需到系統鍵盤設定加入、選用；部分系統可能需登出再登入。
+## Use the app
 
-開發預覽採 ad-hoc 簽署。從網路下載後 Gatekeeper 可能阻擋；若系統不允許開啟，請等待正式 Developer ID 簽署與公證版本，不需要關閉系統安全防護。開源碼可供有 Xcode 的開發者自行建置。
+1. Download the DMG and drag **ShunType.app** to **Applications**.
+2. Open the app and select **注音試打** (typing editor).
+3. Type standard Zhuyin keystrokes or English. Examples: `su3cl3` → `你好`, `su3cl3a8` → `你好嗎`, and `5j/ eji6` → `中國`.
+4. Press **Enter** to commit a composition, **Esc** to commit the original keystrokes, or **↓ / Tab** to cycle candidates.
+5. To recover existing text, open **還原文字** (text recovery), paste the text, and review the result.
 
-## 三種模式
+The first Enter commits an active composition. A subsequent Enter is handled by the host text field or app.
 
-| 模式 | 行為 |
+The downloaded preview is not notarized. If macOS blocks it, wait for a signed and notarized release or build the source with Xcode. Disabling Gatekeeper is not part of the installation procedure.
+
+## Optional system input method
+
+**Experimental; cross-app acceptance is pending.** The app includes a separate InputMethodKit bundle. Use **安裝與說明** (installation and instructions) to install it, then select **選用順打** and confirm **選用測試** to enable it for a test in a blank document. **切回 ABC** returns to the system ABC input source. It can also be added through macOS Keyboard settings; earlier builds were incorrectly listed under English because their input-method metadata was missing. macOS may retain cached information until the next login. A logout and login may be needed before macOS lists the input method.
+
+ShunType must be the selected input source to process input in other apps. Selecting ABC stops ShunType from processing that session. Keep ABC and your existing Chinese input method available.
+
+In the system input method, **Control + Backslash (`\`)** cycles through the three modes. Mode selection is local to an input session in version 0.1.
+
+| Mode | Behavior |
 |---|---|
-| 自動中英 | 有完整注音與足夠線索才轉換；單音節與有歧義字串保守保留 |
-| 注音優先 | 對有效注音顯示中文，適合單字輸入及歧義情況 |
-| 純英文 | 直接輸出英數，暫時略過注音判斷 |
+| Automatic / 自動中英 | Converts complete Zhuyin sequences with sufficient evidence; otherwise preserves the input |
+| Zhuyin-first / 注音優先 | Shows Chinese candidates for valid Zhuyin, including single syllables |
+| English-only / 純英文 | Outputs literal characters without Zhuyin conversion |
 
-原生輸入法以 **Control + \\** 輪換三種模式，也可從輸入法選單選擇。這是每個輸入工作階段的狀態，0.1 尚未提供跨 App 的持久偏好。
+## Privacy and limitations
 
-「還原文字」則可貼入已打錯的文字，檢查結果後自行複製。程式不會追溯改寫其他 App 的文件。
+- No global keyboard event tap, clipboard polling, cloud API, or stored typing history. Accessibility, Screen Recording, and Full Disk Access permissions are not requested.
+- The dictionary and ranking rules can choose the wrong homophone. Candidate coverage tests are not a measure of first-candidate accuracy.
+- Standard Daqian Zhuyin and ANSI physical key positions are supported. Other layouts and key remapping require testing.
+- Missing first-tone separator spaces, incorrect tones, short letter-only input, and Chinese/English sequences without boundaries may be left unchanged.
+- System input registration, app-specific undo behavior, secure fields, vertical text, remote desktops, and compatibility across apps and macOS versions need further acceptance testing. See the validation record for the current scope.
+- The project has not completed a comparative evaluation against other input tools.
 
-## 隱私與限制
+## Build from source
 
-- 不建立全域鍵盤監聽，不要求 Accessibility、螢幕錄製或完整磁碟存取。
-- 不呼叫雲端 API，不上傳輸入，不記錄使用者打字內容；0.1 無學習歷史。
-- 不輪詢剪貼簿。只有使用者按「複製結果」才寫入剪貼簿。
-- 詞庫／規則仍可能選錯同音字；不是完整語意理解，也不是準確率保證。
-- 標準大千注音、ANSI 英數實體鍵位；其他注音配置、非標準鍵盤與重新映射須另測。
-- 自動模式不積極處理缺少第一聲分隔空白、拼錯聲調、純英文字母的短字串。
-- 中文與英文直接黏在同一連續組字內時，0.1 可能保留整段原文；目前以空白／Enter 結束組字後混打最可靠。
-- 第一個 Enter 結束組字，不替使用者送出訊息；下一個 Enter 交給原 App。
-- 選用順打才會處理輸入；切到 ABC 後順打不介入。密碼與安全輸入交由 macOS 控制。
-- 系統原生候選面板、直排、遠端桌面及特定 App 的復原語意仍需更多接受測試。
-
-## 從原始碼建置
-
-開發者需要 macOS 14+、Xcode Command Line Tools（Swift 6.0+）、Python 3（僅用於打包腳本）。使用者開啟已建置的 App 不需要這些工具。
+Development requires macOS 14+, Swift 6.0+ through Xcode or Command Line Tools, and Python 3 for packaging. Users of a built app do not need these tools.
 
 ```sh
 swift test
@@ -55,28 +62,62 @@ swift run ShunTypeCheck 'su3cl3'
 python3 scripts/package.py
 ```
 
-產物位於 `outputs/`：App、DMG、SHA-256 核對檔與 build manifest。建置不會安裝或啟用輸入法。
+Outputs are written to `outputs/`: the app, DMG, checksums, and build manifest. Packaging runs `--self-check` on both packaged executables and stops if startup or synthetic-client checks fail. These checks do not register, enable, or select an input source and do not establish cross-app compatibility. Building does not install or enable the input method. The DMG architecture matches the build machine; it is not a Universal build.
 
-本專案不依賴第三方套件管理器；已將固定版本詞庫放入資源。開發者需重建詞庫時才執行：
+The pinned dictionary is included in the repository. To regenerate it:
 
 ```sh
 python3 scripts/prepare_dictionary.py
 ```
 
-## 目錄
+## Source layout
 
 ```text
-Sources/ShunTypeCore/         按鍵解析、候選解碼、組字狀態機、離線詞庫
-Sources/ShunType/             原生 SwiftUI / AppKit App、試打與安裝介面
-Sources/ShunTypeInputMethod/  InputMethodKit 系統輸入法
-Sources/ShunTypeCheck/        可重現核心檢查與效能量測
-Tests/                       核心及狀態機測試
-scripts/                     資料來源固定、圖示、App / DMG 打包
-docs/                        規劃、限制與驗證證據
+Sources/ShunTypeCore/         Parsing, candidate ranking, composition, dictionary
+Sources/ShunType/             SwiftUI / AppKit app and installation UI
+Sources/ShunTypeInputMethod/  InputMethodKit input method
+Sources/ShunTypeCheck/        Core checks and benchmark
+Tests/                       Decoder and composition tests
+scripts/                     Dictionary preparation and app / DMG packaging
+docs/                        Plan, limitations, validation, and publishing notes
 ```
 
-## 授權與致謝
+## License and data source
 
-順打程式碼採 [MIT](LICENSE)。注音資料取自 [McBopomofo](https://github.com/openvanilla/McBopomofo)，保留 [上游 MIT 授權](Sources/ShunTypeCore/Resources/McBopomofo-LICENSE.txt)；固定來源 commit、輸入雜湊與產生後雜湊見 [dictionary-source.json](Sources/ShunTypeCore/Resources/dictionary-source.json)。
+The app code is available under the [MIT License](LICENSE). Dictionary data comes from [McBopomofo](https://github.com/openvanilla/McBopomofo) with its [MIT license retained](Sources/ShunTypeCore/Resources/McBopomofo-LICENSE.txt). The pinned revision and SHA-256 hashes are recorded in [dictionary-source.json](Sources/ShunTypeCore/Resources/dictionary-source.json).
 
-本專案尚未做與其他產品的正式比較測試；「少切換」是產品目標，不是已證實的優越性主張。
+---
+
+## 繁體中文
+
+順打是 macOS App，用來測試英文與繁體中文注音混合輸入，以及還原忘記切換輸入法時打出的英數字串。包含注音試打、文字還原，以及可另外安裝的原生輸入法。
+
+[下載 DMG](https://github.com/Joe05520/ShunType/releases/tag/v0.1.0-preview.2) · [開發計畫](docs/PLAN.zh-Hant.md) · [驗證紀錄](docs/VALIDATION.zh-Hant.md)
+
+**目前為開發預覽。** DMG 為 Apple Silicon 版本，部署目標 macOS 14 以上。尚未取得 Developer ID 簽署與 Apple 公證，下載版可能被 Gatekeeper 阻擋。舊版曾因輸入法封裝缺少必要設定，以及後續初始化修改造成啟動崩潰，而無法打字。本版修正這兩處錯誤，並加入封裝啟動及模擬文字框檢查；跨 App 實體鍵盤驗收仍未完成，請先使用 App 內試打與文字還原。實際已測與未測範圍列在驗證紀錄。
+
+### 使用方式
+
+1. 開啟 DMG，把 `ShunType.app` 拖到「應用程式」。
+2. 開啟 App，在「注音試打」輸入標準注音按鍵或英文。
+3. `su3cl3` 對應「你好」；`su3cl3a8` 對應「你好嗎」；`5j/ eji6` 對應「中國」。
+4. Enter 確認組字，Esc 保留原始英數，↓／Tab 換候選。組字中的第一個 Enter 只確認文字，下一個 Enter 才交給文字框或原 App 處理。
+5. 已打錯的文字可貼到「還原文字」，檢查後自行複製結果。
+
+### 三種模式
+
+- **自動中英：** 有完整注音及足夠線索才轉換；不明確時保留原文。
+- **注音優先：** 對有效注音顯示中文，包含單音節。
+- **純英文：** 直接輸出英數，不做注音轉換。
+
+**原生輸入法仍在測試中。** 如需在空白文件進行測試，可從「安裝與說明」安裝輸入法，再按「選用順打」並確認「選用測試」。「切回 ABC」可返回系統英文輸入。也可從 macOS 鍵盤設定加入；舊版因缺少輸入法設定而被列在「英文」分類，macOS 可能保留快取，部分系統需要登出再登入。原生輸入法可用 Control + 反斜線（`\`）輪換模式。切回 ABC 後，順打不會處理輸入。
+
+### 資料處理與限制
+
+詞庫隨 App 附上，包含 171,126 筆資料。輸入在本機處理，不需帳號、雲端服務或額外模型；不記錄打字歷史，不建立全域鍵盤監聽，也不輪詢剪貼簿。只有按下「複製結果」才會寫入剪貼簿。
+
+目前支援標準大千注音與 ANSI 實體鍵位。同音字仍可能選錯；短字串、缺少第一聲分隔空白、錯誤聲調或中英文直接黏在一起時，可能不轉換。其他鍵盤配置、各 App 的復原操作、安全輸入、直排、遠端桌面與不同 macOS 版本仍需測試。請保留 ABC 與原有注音輸入法。
+
+若 macOS 阻擋下載版，請等待正式簽署與公證版本，或使用 Xcode 從原始碼建置。安裝流程不包含關閉 Gatekeeper。
+
+建置指令與原始碼目錄見上方英文說明。程式碼採 MIT 授權；注音資料來自 McBopomofo，保留上游授權及來源雜湊。
